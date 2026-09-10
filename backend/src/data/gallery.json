@@ -1,0 +1,29 @@
+[
+  {
+    "id": "1",
+    "title": "Progetto Automazione Industriale",
+    "category": "Ingegneria",
+    "description": "Sviluppo interfacce HMI e architetture di controllo ad alte prestazioni.",
+    "imageUrl": "https://picsum.photos/id/1060/800/600",
+    "date": "2026-02-15",
+    "details": ["Integrazione PLC", "Interfaccia Reattiva", "Protocolli di Comunicazione"]
+  },
+  {
+    "id": "2",
+    "title": "Design e Architettura Software",
+    "category": "Sviluppo Web",
+    "description": "Sistemi modulari e scalabili basati su API REST e TypeScript.",
+    "imageUrl": "https://picsum.photos/id/180/800/600",
+    "date": "2026-05-10",
+    "details": ["TypeScript Fullstack", "API RESTful", "Componenti Modulari"]
+  },
+  {
+    "id": "3",
+    "title": "Fotografia Naturalistica",
+    "category": "Galleria",
+    "description": "Scatti in alta risoluzione dedicati a paesaggi e viaggi outdoor.",
+    "imageUrl": "https://picsum.photos/id/1015/800/600",
+    "date": "2026-08-01",
+    "details": ["Fotografia Digitale", "High Dynamic Range", "Escursioni"]
+  }
+]
