@@ -27,8 +27,8 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 function renderHome() {
   app.innerHTML = `
     <section class="hero">
-      <h1>Presentazione Progetti & Gallerie</h1>
-      <p>Esplora la nostra collezione visiva e scopri le specifiche tecniche di ogni realizzazione.</p>
+      <h1>Benvenuti su La Tana di Ariel</h1>
+      <p>Un diario aperto dove si intrecciano racconti di vacanze e viaggi nella natura, insieme a creazioni artigianali uniche fatte a mano con materiali sostenibili.</p>
     </section>
     <section class="grid" id="featured-grid"></section>
   `;
@@ -75,7 +75,7 @@ function renderAbout() {
   app.innerHTML = `
     <section class="hero">
       <h1>Chi Siamo</h1>
-      <p>Sviluppiamo soluzioni software moderne e interfacce ad altas prestazioni con architetture pulite e reattive.</p>
+      <p><strong>La Tana di Ariel</strong> nasce dalla passione per i viaggi autentici e dal desiderio di dare nuova vita ai materiali naturali e di recupero.</p>
     </section>
   `;
 }
