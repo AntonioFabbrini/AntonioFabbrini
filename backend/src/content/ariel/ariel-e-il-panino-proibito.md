@@ -1,6 +1,7 @@
 ---
 title: Ariel e il panino proibito
 excerpt: Ariel aveva osservato, azionato il pedale del bidone con la zampa, ed era riuscita a recuperarlo.
+image: /uploads/1789252235495-c3ff9a7f5b89.png
 ---
 
 Ariel è sempre stata molto golosa.

@@ -11,6 +11,7 @@ export interface ContentInput {
   date?: string;
   excerpt?: string;
   featured?: boolean;
+  image?: string;
   body: string;
   slug?: string;
 }
@@ -52,6 +53,7 @@ function writeContentFile(filePath: string, input: ContentInput): void {
   const lines = ['---', `title: ${oneLine(input.title)}`];
   if (input.date) lines.push(`date: ${oneLine(input.date)}`);
   if (input.excerpt) lines.push(`excerpt: ${oneLine(input.excerpt)}`);
+  if (input.image) lines.push(`image: ${oneLine(input.image)}`);
   if (input.featured) lines.push('featured: true');
   lines.push('---', '', input.body.trim(), '');
 
@@ -89,6 +91,7 @@ export function listContent(category?: string): ContentItem[] {
         excerpt: meta.excerpt,
         body,
         featured: meta.featured === 'true',
+        image: meta.image,
       });
     }
   }

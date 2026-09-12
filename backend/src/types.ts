@@ -6,4 +6,5 @@ export interface ContentItem {
   excerpt?: string;
   body: string;
   featured?: boolean;
+  image?: string;
 }

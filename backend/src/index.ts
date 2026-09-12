@@ -1,6 +1,9 @@
+import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import multer from 'multer';
 import {
   listContent,
   getContentItem,
@@ -16,6 +19,36 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// Upload immagini: i file finiscono in public/uploads e sono serviti come
+// file statici (es. /uploads/xyz.jpg), pronti per essere usati come `image`
+// di un contenuto.
+const UPLOADS_DIR = path.join(__dirname, '..', 'public', 'uploads');
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+};
+
+const MAX_IMAGE_SIZE_MB = 5;
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+    filename: (_req, file, cb) => {
+      const ext = IMAGE_EXTENSION_BY_MIME[file.mimetype] || '.jpg';
+      cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`);
+    },
+  }),
+  limits: { fileSize: MAX_IMAGE_SIZE_MB * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (IMAGE_EXTENSION_BY_MIME[file.mimetype]) cb(null, true);
+    else cb(new Error('Formato immagine non supportato (usa JPG, PNG, WEBP o GIF)'));
+  },
+});
 
 // Pagina di stato: comoda solo per verificare a mano che il server sia attivo
 app.get('/', (_req: Request, res: Response) => {
@@ -42,6 +75,7 @@ app.get('/', (_req: Request, res: Response) => {
     <li><a href="/api/content">GET /api/content</a> — tutti i contenuti</li>
     <li><a href="/api/content?category=ariel">GET /api/content?category=ariel</a> — contenuti di una categoria</li>
     <li><code>GET /api/content/:category/:slug</code> — dettaglio di un singolo contenuto</li>
+    <li><code>POST /api/upload</code> — carica un'immagine (campo form-data "image", max ${MAX_IMAGE_SIZE_MB}MB, JPG/PNG/WEBP/GIF)</li>
     <li><code>POST /api/content</code> — crea un contenuto</li>
     <li><code>PUT /api/content/:category/:slug</code> — modifica un contenuto</li>
     <li><code>DELETE /api/content/:category/:slug</code> — elimina un contenuto</li>
@@ -49,6 +83,23 @@ app.get('/', (_req: Request, res: Response) => {
   <p>Il sito vero e proprio è servito separatamente dal frontend (Vite), non da qui.</p>
 </body>
 </html>`);
+});
+
+// Carica un'immagine e restituisce l'URL da usare come campo `image` di un contenuto
+app.post('/api/upload', (req: Request, res: Response) => {
+  upload.single('image')(req, res, (err: unknown) => {
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: `L'immagine supera la dimensione massima di ${MAX_IMAGE_SIZE_MB}MB` });
+    }
+    if (err) {
+      const message = err instanceof Error ? err.message : 'Caricamento immagine non riuscito';
+      return res.status(400).json({ message });
+    }
+    if (!req.file) {
+      return res.status(400).json({ message: 'Nessuna immagine ricevuta' });
+    }
+    res.status(201).json({ url: `/uploads/${req.file.filename}` });
+  });
 });
 
 // Elenco delle categorie disponibili (ariel, olivia, tana, bottega, ...)
@@ -64,12 +115,12 @@ app.get('/api/content', (req: Request, res: Response) => {
 
 // Crea un nuovo contenuto
 app.post('/api/content', (req: Request, res: Response) => {
-  const { category, title, date, excerpt, featured, body, slug } = req.body || {};
+  const { category, title, date, excerpt, featured, image, body, slug } = req.body || {};
   if (!category || !title || !body) {
     return res.status(400).json({ message: 'category, title e body sono obbligatori' });
   }
   try {
-    const item = createContentItem({ category, title, date, excerpt, featured: !!featured, body, slug });
+    const item = createContentItem({ category, title, date, excerpt, featured: !!featured, image, body, slug });
     res.status(201).json(item);
   } catch (err) {
     res.status(409).json({ message: (err as Error).message });
@@ -89,7 +140,7 @@ app.get('/api/content/:category/:slug', (req: Request, res: Response) => {
 
 // Modifica un contenuto esistente (può cambiarne categoria e titolo/slug)
 app.put('/api/content/:category/:slug', (req: Request, res: Response) => {
-  const { category, title, date, excerpt, featured, body, slug } = req.body || {};
+  const { category, title, date, excerpt, featured, image, body, slug } = req.body || {};
   if (!category || !title || !body) {
     return res.status(400).json({ message: 'category, title e body sono obbligatori' });
   }
@@ -100,6 +151,7 @@ app.put('/api/content/:category/:slug', (req: Request, res: Response) => {
       date,
       excerpt,
       featured: !!featured,
+      image,
       body,
       slug,
     });
