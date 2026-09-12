@@ -48,7 +48,7 @@ function parseMarkdown(raw: string): { meta: Record<string, string>; body: strin
 }
 
 function writeContentFile(filePath: string, input: ContentInput): void {
-  const oneLine = (value: string) => value.replace(/\r?\n/g, ' ').trim();
+  const oneLine = (value: string) => value.replace(/[\r\n]+/g, ' ').trim();
 
   const lines = ['---', `title: ${oneLine(input.title)}`];
   if (input.date) lines.push(`date: ${oneLine(input.date)}`);

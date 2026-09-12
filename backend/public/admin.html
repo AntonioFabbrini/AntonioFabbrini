@@ -24,7 +24,8 @@
     line-height:1.55;
   }
   h1{color:var(--green);margin:0 0 4px;}
-  .sub{color:var(--ink-soft);margin:0 0 32px;}
+  .sub{color:var(--ink-soft);margin:0;}
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:32px;}
   h2{color:var(--green);font-size:1.15rem;margin:0 0 14px;}
   .layout{display:grid;grid-template-columns:1.1fr 1fr;gap:32px;align-items:start;}
   @media (max-width:760px){ .layout{grid-template-columns:1fr;} }
@@ -82,8 +83,13 @@
 </head>
 <body>
 
-  <h1>Contenuti della Tana</h1>
-  <p class="sub">Aggiungi, modifica o elimina i racconti che compaiono sul sito. Nessuna conoscenza tecnica richiesta.</p>
+  <div class="page-head">
+    <div>
+      <h1>Contenuti della Tana</h1>
+      <p class="sub">Aggiungi, modifica o elimina i racconti che compaiono sul sito.</p>
+    </div>
+    <button type="button" class="btn-ghost" id="logoutBtn">Esci</button>
+  </div>
 
   <div class="layout">
     <form id="form">
@@ -157,8 +163,33 @@
   const imagePreview = document.getElementById('imagePreview');
   const imagePreviewImg = document.getElementById('imagePreviewImg');
   const imageRemoveBtn = document.getElementById('imageRemoveBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  logoutBtn.addEventListener('click', async () => {
+    await fetch(`${API}/logout`, { method: 'POST' });
+    window.location.reload();
+  });
+
+  // Se la sessione è scaduta durante l'uso, una chiamata protetta risponde
+  // 401: ricarichiamo per mostrare di nuovo il modulo di accesso.
+  function handleExpiredSession(res) {
+    if (res.status === 401) {
+      window.location.reload();
+      return true;
+    }
+    return false;
+  }
 
   const MAX_IMAGE_SIZE_MB = 5;
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
   let editing = null; // { category, slug } dell'elemento in modifica, se presente
   let currentImageUrl = undefined; // immagine già salvata (se non se ne sceglie una nuova)
@@ -211,7 +242,7 @@
   async function loadCategories() {
     const res = await fetch(`${API}/categories`);
     const categories = await res.json();
-    categoryOptions.innerHTML = categories.map(c => `<option value="${c}">`).join('');
+    categoryOptions.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}">`).join('');
   }
 
   async function loadList() {
@@ -230,16 +261,16 @@
 
     listEl.innerHTML = Object.keys(byCategory).sort().map(cat => `
       <div class="category-group">
-        <h3>${cat}</h3>
+        <h3>${escapeHtml(cat)}</h3>
         ${byCategory[cat].map(item => `
           <div class="item">
-            ${item.image ? `<img class="item-thumb" src="${item.image}" alt="">` : ''}
-            <div class="item-title">${item.title}${item.featured ? ' ⭐' : ''}</div>
-            <div class="item-meta">${item.date || ''}</div>
-            ${item.excerpt ? `<div class="item-excerpt">${item.excerpt}</div>` : ''}
+            ${item.image ? `<img class="item-thumb" src="${escapeHtml(item.image)}" alt="">` : ''}
+            <div class="item-title">${escapeHtml(item.title)}${item.featured ? ' ⭐' : ''}</div>
+            <div class="item-meta">${escapeHtml(item.date || '')}</div>
+            ${item.excerpt ? `<div class="item-excerpt">${escapeHtml(item.excerpt)}</div>` : ''}
             <div class="item-actions">
-              <button type="button" class="btn-ghost" data-edit="${item.category}|${item.slug}">Modifica</button>
-              <button type="button" class="btn-danger" data-delete="${item.category}|${item.slug}">Elimina</button>
+              <button type="button" class="btn-ghost" data-edit="${escapeHtml(item.category)}|${escapeHtml(item.slug)}">Modifica</button>
+              <button type="button" class="btn-danger" data-delete="${escapeHtml(item.category)}|${escapeHtml(item.slug)}">Elimina</button>
             </div>
           </div>
         `).join('')}
@@ -281,6 +312,7 @@
       const [category, slug] = deleteKey.split('|');
       if (!confirm('Eliminare definitivamente questo contenuto?')) return;
       const res = await fetch(`${API}/content/${category}/${slug}`, { method: 'DELETE' });
+      if (handleExpiredSession(res)) return;
       if (res.ok) {
         if (editing && editing.category === category && editing.slug === slug) resetForm();
         loadList();
@@ -293,6 +325,7 @@
     const formData = new FormData();
     formData.append('image', file);
     const res = await fetch(`${API}/upload`, { method: 'POST', body: formData });
+    if (handleExpiredSession(res)) throw new Error('Sessione scaduta.');
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || 'Caricamento immagine non riuscito.');
     return data.url;
@@ -339,6 +372,7 @@
       body: JSON.stringify(payload),
     });
 
+    if (handleExpiredSession(res)) return;
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       showMsg(data.message || 'Si è verificato un errore.', 'error');

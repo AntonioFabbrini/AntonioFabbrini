@@ -64,6 +64,18 @@ function pickFeatured(items: ContentItem[]): ContentItem | undefined {
   return items.find((item) => item.featured) || items[0];
 }
 
+// I contenuti arrivano dal backend, che non richiede autenticazione per la
+// lettura: vanno trattati come testo non fidato quando finiscono in innerHTML,
+// per evitare che tag o attributi malevoli vengano eseguiti nella pagina.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Icona decorativa mostrata al posto della foto quando un contenuto non ne ha
 // ancora una, coerente con le icone già usate nei riquadri della home.
 const CATEGORY_ICONS: Record<string, string> = {
@@ -102,7 +114,7 @@ function getCategoryIcon(category: string): string {
 // reale se presente, altrimenti un'icona decorativa della categoria.
 function renderMedia(item: ContentItem, imageClass: string, placeholderClass: string): string {
   return item.image
-    ? `<img class="${imageClass}" src="${resolveImageUrl(item.image)}" alt="">`
+    ? `<img class="${imageClass}" src="${escapeHtml(resolveImageUrl(item.image))}" alt="">`
     : `<div class="${placeholderClass}">${getCategoryIcon(item.category)}</div>`;
 }
 
@@ -126,7 +138,7 @@ function openStoryModal(item: ContentItem) {
     .split(/\n\n+/)
     .map((p) => p.trim())
     .filter(Boolean)
-    .map((p) => `<p>${p}</p>`)
+    .map((p) => `<p>${escapeHtml(p)}</p>`)
     .join('');
   storyModalBody.innerHTML = imageHtml + bodyHtml;
 
@@ -186,11 +198,11 @@ async function hydrateCategoryList() {
   const cards = items
     .map(
       (item) => `
-        <article class="story-card" data-slug="${item.slug}">
+        <article class="story-card" data-slug="${escapeHtml(item.slug)}">
           ${renderMedia(item, 'story-card-image', 'story-card-placeholder')}
           <div class="story-card-body">
-            <h3>${item.title}${item.featured ? ' ⭐' : ''}</h3>
-            ${item.excerpt ? `<p class="teaser">${item.excerpt}</p>` : ''}
+            <h3>${escapeHtml(item.title)}${item.featured ? ' ⭐' : ''}</h3>
+            ${item.excerpt ? `<p class="teaser">${escapeHtml(item.excerpt)}</p>` : ''}
             <span class="story-cta">Leggi il racconto →</span>
           </div>
         </article>
@@ -230,11 +242,11 @@ async function hydrateShopGrid() {
   const cards = items
     .map(
       (item) => `
-        <article class="shop-card" data-slug="${item.slug}">
+        <article class="shop-card" data-slug="${escapeHtml(item.slug)}">
           ${renderMedia(item, 'shop-card-image', 'shop-card-placeholder')}
           <div class="shop-card-body">
-            <h3>${item.title}${item.featured ? ' ⭐' : ''}</h3>
-            ${item.excerpt ? `<p class="teaser">${item.excerpt}</p>` : ''}
+            <h3>${escapeHtml(item.title)}${item.featured ? ' ⭐' : ''}</h3>
+            ${item.excerpt ? `<p class="teaser">${escapeHtml(item.excerpt)}</p>` : ''}
             <span class="story-cta">Scopri di più →</span>
           </div>
         </article>
@@ -266,8 +278,8 @@ async function hydrateManifesto() {
   const signoff = paragraphs[paragraphs.length - 1]?.startsWith('—') ? paragraphs.pop() : undefined;
 
   letter.innerHTML =
-    paragraphs.map((p) => `<p>${p}</p>`).join('') +
-    (signoff ? `<p class="signoff">${signoff}</p>` : '');
+    paragraphs.map((p) => `<p>${escapeHtml(p)}</p>`).join('') +
+    (signoff ? `<p class="signoff">${escapeHtml(signoff)}</p>` : '');
 }
 
 hydratePathCard('ariel');
