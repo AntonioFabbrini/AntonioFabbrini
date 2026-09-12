@@ -1,9 +1,9 @@
-export interface GalleryItem {
-  id: string;
-  title: string;
+export interface ContentItem {
+  slug: string;
   category: string;
-  description: string;
-  imageUrl: string;
-  date: string;
-  details?: string[];
+  title: string;
+  date?: string;
+  excerpt?: string;
+  body: string;
+  featured?: boolean;
 }

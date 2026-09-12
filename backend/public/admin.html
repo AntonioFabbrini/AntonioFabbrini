@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>La Tana di Ariel — Contenuti</title>
+<style>
+  :root{
+    --paper:#f4ecdb;
+    --paper-card:#f8f1e2;
+    --ink:#2c2116;
+    --ink-soft:#5b4d3c;
+    --green:#2c4330;
+    --green-deep:#1c2b1f;
+    --crimson:#8f2c1d;
+    --gold:#b9873f;
+    --line:rgba(44,33,22,0.16);
+  }
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,sans-serif;
+    max-width:920px;margin:0 auto;padding:32px 24px 80px;
+    line-height:1.55;
+  }
+  h1{color:var(--green);margin:0 0 4px;}
+  .sub{color:var(--ink-soft);margin:0 0 32px;}
+  h2{color:var(--green);font-size:1.15rem;margin:0 0 14px;}
+  .layout{display:grid;grid-template-columns:1.1fr 1fr;gap:32px;align-items:start;}
+  @media (max-width:760px){ .layout{grid-template-columns:1fr;} }
+
+  form, .list{
+    background:var(--paper-card);border:1px solid var(--line);border-radius:8px;
+    padding:22px;
+  }
+  label{display:block;font-weight:700;font-size:0.85rem;margin:14px 0 4px;color:var(--ink-soft);}
+  label:first-of-type{margin-top:0;}
+  input[type=text], textarea{
+    width:100%;padding:0.6em 0.7em;border:1px solid var(--line);border-radius:6px;
+    background:#fff;color:var(--ink);font-family:inherit;font-size:0.95rem;
+  }
+  textarea{min-height:180px;resize:vertical;}
+  .row{display:flex;gap:14px;}
+  .row > div{flex:1;}
+  .checkbox{display:flex;align-items:center;gap:8px;margin-top:16px;}
+  .checkbox input{width:auto;}
+  .checkbox label{margin:0;font-weight:600;}
+  .actions{display:flex;gap:10px;margin-top:20px;align-items:center;}
+  button{
+    font-family:inherit;font-weight:700;font-size:0.9rem;border:none;border-radius:999px;
+    padding:0.7em 1.4em;cursor:pointer;
+  }
+  .btn-primary{background:var(--green);color:var(--paper-card);}
+  .btn-primary:hover{background:var(--green-deep);}
+  .btn-ghost{background:none;border:1.5px solid var(--line);color:var(--ink);}
+  .btn-danger{background:none;color:var(--crimson);border:1.5px solid var(--crimson);padding:0.35em 0.9em;font-size:0.78rem;}
+  .msg{font-size:0.88rem;margin-top:12px;}
+  .msg.error{color:var(--crimson);}
+  .msg.ok{color:var(--green);}
+
+  .item{border-bottom:1px solid var(--line);padding:12px 0;}
+  .item:last-child{border-bottom:none;}
+  .item-title{font-weight:700;}
+  .item-meta{font-size:0.78rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em;}
+  .item-excerpt{font-size:0.88rem;color:var(--ink-soft);margin-top:4px;}
+  .item-actions{margin-top:8px;display:flex;gap:8px;}
+  .item-actions button{font-size:0.78rem;padding:0.35em 0.9em;}
+  .category-group{margin-bottom:18px;}
+  .category-group h3{font-size:0.8rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);margin:0 0 6px;}
+  datalist{}
+</style>
+</head>
+<body>
+
+  <h1>Contenuti della Tana</h1>
+  <p class="sub">Aggiungi, modifica o elimina i racconti che compaiono sul sito. Nessuna conoscenza tecnica richiesta.</p>
+
+  <div class="layout">
+    <form id="form">
+      <h2 id="formTitle">Nuovo contenuto</h2>
+
+      <label for="category">Categoria</label>
+      <input type="text" id="category" list="categoryOptions" placeholder="es. ariel, olivia, bottega, tana" required>
+      <datalist id="categoryOptions"></datalist>
+
+      <label for="title">Titolo</label>
+      <input type="text" id="title" required>
+
+      <div class="row">
+        <div>
+          <label for="date">Data (facoltativa)</label>
+          <input type="text" id="date" placeholder="2026-01-01">
+        </div>
+      </div>
+
+      <label for="excerpt">Anteprima breve (facoltativa)</label>
+      <input type="text" id="excerpt" placeholder="Una riga che riassume il racconto">
+
+      <label for="body">Testo del racconto</label>
+      <textarea id="body" required></textarea>
+
+      <div class="checkbox">
+        <input type="checkbox" id="featured">
+        <label for="featured">Mostralo come anteprima principale di questa categoria</label>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn-primary" id="submitBtn">Salva</button>
+        <button type="button" class="btn-ghost" id="cancelBtn" hidden>Annulla modifica</button>
+      </div>
+      <p class="msg" id="formMsg"></p>
+    </form>
+
+    <div class="list">
+      <h2>Contenuti esistenti</h2>
+      <div id="list">Caricamento…</div>
+    </div>
+  </div>
+
+<script>
+  const API = '/api';
+  const form = document.getElementById('form');
+  const formTitle = document.getElementById('formTitle');
+  const submitBtn = document.getElementById('submitBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const formMsg = document.getElementById('formMsg');
+  const listEl = document.getElementById('list');
+  const categoryOptions = document.getElementById('categoryOptions');
+
+  const fields = {
+    category: document.getElementById('category'),
+    title: document.getElementById('title'),
+    date: document.getElementById('date'),
+    excerpt: document.getElementById('excerpt'),
+    body: document.getElementById('body'),
+    featured: document.getElementById('featured'),
+  };
+
+  let editing = null; // { category, slug } dell'elemento in modifica, se presente
+
+  function showMsg(text, kind) {
+    formMsg.textContent = text;
+    formMsg.className = 'msg ' + (kind || '');
+  }
+
+  function resetForm() {
+    editing = null;
+    form.reset();
+    formTitle.textContent = 'Nuovo contenuto';
+    submitBtn.textContent = 'Salva';
+    cancelBtn.hidden = true;
+    showMsg('', '');
+  }
+
+  cancelBtn.addEventListener('click', resetForm);
+
+  async function loadCategories() {
+    const res = await fetch(`${API}/categories`);
+    const categories = await res.json();
+    categoryOptions.innerHTML = categories.map(c => `<option value="${c}">`).join('');
+  }
+
+  async function loadList() {
+    const res = await fetch(`${API}/content`);
+    const items = await res.json();
+
+    if (items.length === 0) {
+      listEl.innerHTML = '<p class="item-excerpt">Nessun contenuto ancora.</p>';
+      return;
+    }
+
+    const byCategory = {};
+    items.forEach(item => {
+      (byCategory[item.category] = byCategory[item.category] || []).push(item);
+    });
+
+    listEl.innerHTML = Object.keys(byCategory).sort().map(cat => `
+      <div class="category-group">
+        <h3>${cat}</h3>
+        ${byCategory[cat].map(item => `
+          <div class="item">
+            <div class="item-title">${item.title}${item.featured ? ' ⭐' : ''}</div>
+            <div class="item-meta">${item.date || ''}</div>
+            ${item.excerpt ? `<div class="item-excerpt">${item.excerpt}</div>` : ''}
+            <div class="item-actions">
+              <button type="button" class="btn-ghost" data-edit="${item.category}|${item.slug}">Modifica</button>
+              <button type="button" class="btn-danger" data-delete="${item.category}|${item.slug}">Elimina</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
+  }
+
+  listEl.addEventListener('click', async (e) => {
+    const editKey = e.target.getAttribute('data-edit');
+    const deleteKey = e.target.getAttribute('data-delete');
+
+    if (editKey) {
+      const [category, slug] = editKey.split('|');
+      const res = await fetch(`${API}/content/${category}/${slug}`);
+      if (!res.ok) return;
+      const item = await res.json();
+
+      editing = { category, slug };
+      fields.category.value = item.category;
+      fields.title.value = item.title;
+      fields.date.value = item.date || '';
+      fields.excerpt.value = item.excerpt || '';
+      fields.body.value = item.body;
+      fields.featured.checked = !!item.featured;
+
+      formTitle.textContent = `Modifica: ${item.title}`;
+      submitBtn.textContent = 'Salva modifiche';
+      cancelBtn.hidden = false;
+      showMsg('', '');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    if (deleteKey) {
+      const [category, slug] = deleteKey.split('|');
+      if (!confirm('Eliminare definitivamente questo contenuto?')) return;
+      const res = await fetch(`${API}/content/${category}/${slug}`, { method: 'DELETE' });
+      if (res.ok) {
+        if (editing && editing.category === category && editing.slug === slug) resetForm();
+        loadList();
+        loadCategories();
+      }
+    }
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    showMsg('', '');
+
+    const payload = {
+      category: fields.category.value.trim(),
+      title: fields.title.value.trim(),
+      date: fields.date.value.trim() || undefined,
+      excerpt: fields.excerpt.value.trim() || undefined,
+      body: fields.body.value.trim(),
+      featured: fields.featured.checked,
+    };
+
+    const url = editing
+      ? `${API}/content/${editing.category}/${editing.slug}`
+      : `${API}/content`;
+    const method = editing ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      showMsg(data.message || 'Si è verificato un errore.', 'error');
+      return;
+    }
+
+    showMsg('Salvato.', 'ok');
+    resetForm();
+    loadList();
+    loadCategories();
+  });
+
+  loadCategories();
+  loadList();
+</script>
+</body>
+</html>

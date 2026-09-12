@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>La Nostra Tana — La Tana di Ariel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+<div lang="it">
+
+<header class="site">
+  <div class="wrap nav-row">
+    <a class="wordmark" href="/">
+      <img class="seal" src="/images/logo-seal.jpg" alt="">
+      La Tana di Ariel
+    </a>
+    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navLinks" aria-label="Apri il menu">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    </button>
+    <nav class="links" id="navLinks">
+      <a href="/ariel.html">Ariel</a>
+      <a href="/olivia.html">Olivia</a>
+      <a href="/bottega.html">La Bottega</a>
+      <a href="/tana.html">La Nostra Tana</a>
+      <a href="/chi-siamo.html">Chi siamo</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="paths">
+    <div class="wrap section-head">
+      <span class="eyebrow">La nostra Tana</span>
+      <h1>La Nostra Tana</h1>
+      <p class="lede">Pensieri, riflessioni e tutto ciò che abbiamo imparato lungo la strada — la voce dietro le storie di Ariel e Olivia.</p>
+    </div>
+  </section>
+
+  <section class="category-list">
+    <div class="wrap">
+      <div class="story-list" id="storyList" data-category="tana">
+        <p class="story-list-empty" hidden>Presto qui troverai i primi pensieri della Tana.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap footer-top">
+    <div>
+      <span class="eyebrow">Resta nella Tana</span>
+      <h2>La newsletter arriva presto</h2>
+      <p class="lede">Nel frattempo, la Tana cresce una storia alla volta. Lasciaci la tua email: ti scriveremo appena apriamo la porta.</p>
+    </div>
+    <form class="subscribe" id="subscribeForm">
+      <span class="eyebrow">Presto disponibile</span>
+      <div class="subscribe-row">
+        <label for="subEmail" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">La tua email</label>
+        <input type="email" id="subEmail" name="email" placeholder="La tua email" required>
+        <button class="btn btn-primary" type="submit">Iscrivimi</button>
+      </div>
+      <p class="fine" id="subscribeFine">Niente spam — solo storie dalla Tana, quando ce ne saranno.</p>
+      <p class="thanks" id="subscribeThanks">Grazie! Appena la newsletter sarà pronta, sarai tra i primi ad entrare nella Tana.</p>
+    </form>
+  </div>
+  <div class="wrap footer-bottom">
+    <span class="signature">Con affetto, Linda, Antonio e Ariel</span>
+    <nav>
+      <a href="/ariel.html">Ariel</a>
+      <a href="/olivia.html">Olivia</a>
+      <a href="/bottega.html">La Bottega</a>
+      <a href="/tana.html">La Nostra Tana</a>
+      <a href="/chi-siamo.html">Chi siamo</a>
+    </nav>
+  </div>
+</footer>
+
+  <div class="story-modal hidden" id="storyModal" aria-hidden="true">
+    <div class="story-modal-backdrop" id="storyModalBackdrop"></div>
+    <div class="story-modal-panel" role="dialog" aria-modal="true" aria-labelledby="storyModalTitle">
+      <button type="button" class="story-modal-close" id="storyModalClose" aria-label="Chiudi">&times;</button>
+      <span class="eyebrow" id="storyModalCategory"></span>
+      <h2 id="storyModalTitle"></h2>
+      <div class="story-modal-body" id="storyModalBody"></div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

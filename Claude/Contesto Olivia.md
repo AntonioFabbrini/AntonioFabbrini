@@ -1,0 +1,3 @@
+Olivia è la nostra caravan che abbiamo chiamato così dal nome della piccola tartaruga marina che abbiamo adottato. Il motivo è che come la tartaruga viaggia portandosi sempre con se la sua casa sulle spalle, noi viaggeremo con la nostra tana dietro di noi.
+
+Olivia non è semplicemente la "nostra caravan", è la Tana che ha preso le ruote, una piccola casa che viaggia con noi. Possiamo così uscire nel mondo senza rinunciare alla nostra Tana. Possiamo conoscere luoghi nuovi, vedere il mare dormire nella natura, incontrare persone, vivere avventure.. Ma alla sera ritorniamo nella nostra piccola Tana dove siamo solo noi tre: io (Linda) Antonio (mio marito) e Ariel la nostra cagnolina. Una famiglia forse un po' particolare, un po' anomala, ma piena di amore e di sogni.

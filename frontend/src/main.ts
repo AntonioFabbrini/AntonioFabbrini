@@ -1,141 +1,177 @@
-import { GalleryItem } from './types';
+const navToggle = document.getElementById('navToggle');
+const navLinks = document.getElementById('navLinks');
+
+if (navToggle && navLinks) {
+  navToggle.addEventListener('click', () => {
+    const open = navLinks.classList.toggle('open');
+    navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  navLinks.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => {
+      navLinks.classList.remove('open');
+      navToggle.setAttribute('aria-expanded', 'false');
+    });
+  });
+}
+
+const subscribeForm = document.getElementById('subscribeForm') as HTMLFormElement | null;
+
+if (subscribeForm) {
+  subscribeForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fine = document.getElementById('subscribeFine');
+    const thanks = document.getElementById('subscribeThanks');
+    const row = subscribeForm.querySelector<HTMLElement>('.subscribe-row');
+    if (row) row.style.display = 'none';
+    if (fine) fine.style.display = 'none';
+    if (thanks) thanks.style.display = 'block';
+  });
+}
+
+// ---------- Contenuti dalla Tana (backend) ----------
 
 const API_BASE_URL = 'http://localhost:3000/api';
 
-const app = document.getElementById('app') as HTMLElement;
-const modal = document.getElementById('modal') as HTMLElement;
-const modalBody = document.getElementById('modal-body') as HTMLElement;
-const modalClose = document.getElementById('modal-close') as HTMLElement;
-
-let currentFilter = 'Tutti';
-
-// Routing Client-side
-document.querySelectorAll('.nav-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    const target = e.target as HTMLElement;
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    target.classList.add('active');
-    
-    const page = target.getAttribute('data-page');
-    if (page === 'home') renderHome();
-    else if (page === 'gallery') renderGallery();
-    else if (page === 'about') renderAbout();
-  });
-});
-
-// Render della Home Page Descrittiva
-function renderHome() {
-  app.innerHTML = `
-    <section class="hero">
-      <h1>Benvenuti su La Tana di Ariel</h1>
-      <p>Un diario aperto dove si intrecciano racconti di vacanze e viaggi nella natura, insieme a creazioni artigianali uniche fatte a mano con materiali sostenibili.</p>
-    </section>
-    <section class="grid" id="featured-grid"></section>
-  `;
-  fetchGalleryItems().then(items => {
-    const featuredGrid = document.getElementById('featured-grid');
-    if (featuredGrid) {
-      featuredGrid.innerHTML = items.slice(0, 2).map(createCardHTML).join('');
-      attachCardEvents(items);
-    }
-  });
+interface ContentItem {
+  slug: string;
+  category: string;
+  title: string;
+  date?: string;
+  excerpt?: string;
+  body: string;
+  featured?: boolean;
 }
 
-// Render Galleria Completa con Filtri
-async function renderGallery() {
-  app.innerHTML = `
-    <div class="filter-bar">
-      <button class="filter-btn ${currentFilter === 'Tutti' ? 'active' : ''}" data-cat="Tutti">Tutti</button>
-      <button class="filter-btn ${currentFilter === 'Ingegneria' ? 'active' : ''}" data-cat="Ingegneria">Ingegneria</button>
-      <button class="filter-btn ${currentFilter === 'Sviluppo Web' ? 'active' : ''}" data-cat="Sviluppo Web">Sviluppo Web</button>
-      <button class="filter-btn ${currentFilter === 'Galleria' ? 'active' : ''}" data-cat="Galleria">Galleria</button>
-    </div>
-    <div class="grid" id="gallery-grid"></div>
-  `;
-
-  // Attach filter events
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const cat = (e.target as HTMLElement).getAttribute('data-cat') || 'Tutti';
-      currentFilter = cat;
-      renderGallery();
-    });
-  });
-
-  const items = await fetchGalleryItems(currentFilter);
-  const grid = document.getElementById('gallery-grid');
-  if (grid) {
-    grid.innerHTML = items.map(createCardHTML).join('');
-    attachCardEvents(items);
-  }
-}
-
-// Render Pagina Chi Siamo Descrittiva
-function renderAbout() {
-  app.innerHTML = `
-    <section class="hero">
-      <h1>Chi Siamo</h1>
-      <p><strong>La Tana di Ariel</strong> nasce dalla passione per i viaggi autentici e dal desiderio di dare nuova vita ai materiali naturali e di recupero.</p>
-    </section>
-  `;
-}
-
-// Helpers
-async function fetchGalleryItems(category?: string): Promise<GalleryItem[]> {
+async function fetchContent(category: string): Promise<ContentItem[]> {
   try {
-    const url = category && category !== 'Tutti' 
-      ? `${API_BASE_URL}/gallery?category=${encodeURIComponent(category)}`
-      : `${API_BASE_URL}/gallery`;
-    const res = await fetch(url);
+    const res = await fetch(`${API_BASE_URL}/content?category=${encodeURIComponent(category)}`);
+    if (!res.ok) return [];
     return await res.json();
-  } catch (err) {
-    console.error('Errore nel caricamento dei dati:', err);
+  } catch {
     return [];
   }
 }
 
-function createCardHTML(item: GalleryItem): string {
-  return `
-    <article class="card" data-id="${item.id}">
-      <img src="${item.imageUrl}" alt="${item.title}" loading="lazy" />
-      <div class="card-content">
-        <div class="card-tag">${item.category}</div>
-        <h3 class="card-title">${item.title}</h3>
-        <p class="card-desc">${item.description}</p>
-      </div>
-    </article>
-  `;
+function pickFeatured(items: ContentItem[]): ContentItem | undefined {
+  return items.find((item) => item.featured) || items[0];
 }
 
-function attachCardEvents(items: GalleryItem[]) {
-  document.querySelectorAll('.card').forEach(card => {
+// ---------- Modale di lettura racconto ----------
+
+const storyModal = document.getElementById('storyModal');
+const storyModalBackdrop = document.getElementById('storyModalBackdrop');
+const storyModalClose = document.getElementById('storyModalClose');
+const storyModalCategory = document.getElementById('storyModalCategory');
+const storyModalTitle = document.getElementById('storyModalTitle');
+const storyModalBody = document.getElementById('storyModalBody');
+
+function openStoryModal(item: ContentItem) {
+  if (!storyModal || !storyModalTitle || !storyModalBody) return;
+
+  if (storyModalCategory) storyModalCategory.textContent = item.category;
+  storyModalTitle.textContent = item.title;
+  storyModalBody.innerHTML = item.body
+    .split(/\n\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => `<p>${p}</p>`)
+    .join('');
+
+  storyModal.classList.remove('hidden');
+  storyModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeStoryModal() {
+  if (!storyModal) return;
+  storyModal.classList.add('hidden');
+  storyModal.setAttribute('aria-hidden', 'true');
+}
+
+storyModalBackdrop?.addEventListener('click', closeStoryModal);
+storyModalClose?.addEventListener('click', closeStoryModal);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeStoryModal();
+});
+
+// Aggiorna l'anteprima (titolo + teaser) di ogni riquadro Ariel/Olivia/Bottega
+// nella home, con il racconto segnato come `featured: true` in
+// backend/src/content/<categoria>/. Il riquadro rimanda poi alla pagina
+// della categoria per leggere tutte le storie.
+async function hydratePathCard(category: string) {
+  const card = document.getElementById(category);
+  if (!card) return;
+
+  const items = await fetchContent(category);
+  const featured = pickFeatured(items);
+  if (!featured) return;
+
+  const titleEl = card.querySelector('.sample .title');
+  const teaserEl = card.querySelector('.sample .teaser');
+  if (titleEl) titleEl.textContent = featured.title;
+  if (teaserEl) teaserEl.textContent = featured.excerpt || '';
+}
+
+// Popola l'elenco completo dei racconti di una categoria nella sua pagina
+// dedicata (ariel.html, olivia.html, bottega.html, tana.html). Ogni racconto
+// si apre nel modale al click.
+async function hydrateCategoryList() {
+  const list = document.getElementById('storyList');
+  if (!list) return;
+
+  const category = list.getAttribute('data-category');
+  if (!category) return;
+
+  const items = await fetchContent(category);
+  const emptyMsg = list.querySelector<HTMLElement>('.story-list-empty');
+
+  if (items.length === 0) {
+    if (emptyMsg) emptyMsg.hidden = false;
+    return;
+  }
+  if (emptyMsg) emptyMsg.hidden = true;
+
+  const cards = items
+    .map(
+      (item) => `
+        <article class="story-card" data-slug="${item.slug}">
+          <h3>${item.title}${item.featured ? ' ⭐' : ''}</h3>
+          ${item.excerpt ? `<p class="teaser">${item.excerpt}</p>` : ''}
+          <span class="story-cta">Leggi il racconto →</span>
+        </article>
+      `
+    )
+    .join('');
+  list.insertAdjacentHTML('beforeend', cards);
+
+  list.querySelectorAll<HTMLElement>('.story-card').forEach((card) => {
     card.addEventListener('click', () => {
-      const id = card.getAttribute('data-id');
-      const item = items.find(i => i.id === id);
-      if (item) openModal(item);
+      const slug = card.getAttribute('data-slug');
+      const item = items.find((i) => i.slug === slug);
+      if (item) openStoryModal(item);
     });
   });
 }
 
-function openModal(item: GalleryItem) {
-  modalBody.innerHTML = `
-    <img src="${item.imageUrl}" alt="${item.title}" class="modal-img" />
-    <div class="card-tag">${item.category}</div>
-    <h2>${item.title}</h2>
-    <p style="margin: 0.8rem 0; color: var(--text-muted);">${item.description}</p>
-    ${item.details ? `
-      <ul style="padding-left: 1.2rem; color: var(--accent);">
-        ${item.details.map(d => `<li>${d}</li>`).join('')}
-      </ul>
-    ` : ''}
-  `;
-  modal.classList.remove('hidden');
+// Popola la lettera del manifesto ("Perché scriviamo") con il testo letto
+// da backend/src/content/tana/.
+async function hydrateManifesto() {
+  const letter = document.querySelector('#tana .letter');
+  if (!letter) return;
+
+  const items = await fetchContent('tana');
+  const item = items.find((i) => i.slug === 'perche-scriviamo') || items[0];
+  if (!item) return;
+
+  const paragraphs = item.body.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  const signoff = paragraphs[paragraphs.length - 1]?.startsWith('—') ? paragraphs.pop() : undefined;
+
+  letter.innerHTML =
+    paragraphs.map((p) => `<p>${p}</p>`).join('') +
+    (signoff ? `<p class="signoff">${signoff}</p>` : '');
 }
 
-modalClose.addEventListener('click', () => modal.classList.add('hidden'));
-modal.addEventListener('click', (e) => {
-  if (e.target === modal) modal.classList.add('hidden');
-});
-
-// Avvio iniziale
-renderHome();
+hydratePathCard('ariel');
+hydratePathCard('olivia');
+hydratePathCard('bottega');
+hydrateManifesto();
+hydrateCategoryList();
