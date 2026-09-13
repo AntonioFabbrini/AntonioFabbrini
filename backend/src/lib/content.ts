@@ -33,9 +33,22 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+// Errore "atteso" (input non valido, non trovato, duplicato): il messaggio è
+// scritto per essere mostrato all'utente. Qualsiasi altro errore (es. un
+// problema del filesystem) non deve mai raggiungere il client con il suo
+// messaggio originale, che potrebbe rivelare percorsi interni del server.
+export class ValidationError extends Error {
+  status: number;
+  constructor(message: string, status = 400) {
+    super(message);
+    this.name = 'ValidationError';
+    this.status = status;
+  }
+}
+
 function assertSafeSegment(value: string, label: string): void {
   if (!SAFE_SEGMENT.test(value)) {
-    throw new Error(`${label} non valido`);
+    throw new ValidationError(`${label} non valido`);
   }
 }
 
@@ -114,13 +127,13 @@ export function getContentItem(category: string, slug: string): ContentItem | un
 export function createContentItem(input: ContentInput): ContentItem {
   const category = slugify(input.category);
   const slug = slugify(input.slug || input.title);
-  if (!category) throw new Error('La categoria è obbligatoria');
-  if (!isAllowedCategory(category)) throw new Error('Categoria non valida');
-  if (!slug) throw new Error('Il titolo è obbligatorio');
+  if (!category) throw new ValidationError('La categoria è obbligatoria');
+  if (!isAllowedCategory(category)) throw new ValidationError('Categoria non valida');
+  if (!slug) throw new ValidationError('Il titolo è obbligatorio');
 
   const filePath = path.join(CONTENT_DIR, category, `${slug}.md`);
   if (fs.existsSync(filePath)) {
-    throw new Error('Esiste già un contenuto con questo titolo in questa categoria');
+    throw new ValidationError('Esiste già un contenuto con questo titolo in questa categoria', 409);
   }
 
   writeContentFile(filePath, input);
@@ -136,17 +149,17 @@ export function updateContentItem(
   assertSafeSegment(originalSlug, 'slug');
 
   const oldPath = path.join(CONTENT_DIR, originalCategory, `${originalSlug}.md`);
-  if (!fs.existsSync(oldPath)) throw new Error('Contenuto non trovato');
+  if (!fs.existsSync(oldPath)) throw new ValidationError('Contenuto non trovato', 404);
 
   const newCategory = slugify(input.category);
   const newSlug = slugify(input.slug || input.title);
-  if (!newCategory) throw new Error('La categoria è obbligatoria');
-  if (!isAllowedCategory(newCategory)) throw new Error('Categoria non valida');
-  if (!newSlug) throw new Error('Il titolo è obbligatorio');
+  if (!newCategory) throw new ValidationError('La categoria è obbligatoria');
+  if (!isAllowedCategory(newCategory)) throw new ValidationError('Categoria non valida');
+  if (!newSlug) throw new ValidationError('Il titolo è obbligatorio');
 
   const newPath = path.join(CONTENT_DIR, newCategory, `${newSlug}.md`);
   if (newPath !== oldPath && fs.existsSync(newPath)) {
-    throw new Error('Esiste già un contenuto con questo titolo in questa categoria');
+    throw new ValidationError('Esiste già un contenuto con questo titolo in questa categoria', 409);
   }
 
   writeContentFile(newPath, input);
@@ -160,6 +173,6 @@ export function deleteContentItem(category: string, slug: string): void {
   assertSafeSegment(slug, 'slug');
 
   const filePath = path.join(CONTENT_DIR, category, `${slug}.md`);
-  if (!fs.existsSync(filePath)) throw new Error('Contenuto non trovato');
+  if (!fs.existsSync(filePath)) throw new ValidationError('Contenuto non trovato', 404);
   fs.unlinkSync(filePath);
 }

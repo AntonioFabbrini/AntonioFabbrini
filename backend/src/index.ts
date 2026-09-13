@@ -12,7 +12,20 @@ import {
   createContentItem,
   updateContentItem,
   deleteContentItem,
+  ValidationError,
 } from './lib/content';
+
+// Traduce un errore in una risposta HTTP: i ValidationError hanno un
+// messaggio pensato per l'utente, qualunque altro errore viene registrato
+// solo lato server e non esposto (potrebbe contenere percorsi interni).
+function sendError(res: Response, err: unknown): void {
+  if (err instanceof ValidationError) {
+    res.status(err.status).json({ message: err.message });
+    return;
+  }
+  console.error(err);
+  res.status(500).json({ message: 'Si è verificato un errore imprevisto.' });
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -147,9 +160,13 @@ const LOGIN_PAGE_HTML = `<!DOCTYPE html>
 
 // Mostra il pannello admin se la sessione è valida, altrimenti il modulo di
 // login (mai un messaggio grezzo).
+// admin.html vive FUORI da /public apposta: non deve mai poter essere
+// raggiunto da express.static (es. tramite un percorso come "//admin.html",
+// che non corrisponde a questa rotta ma verrebbe comunque normalizzato e
+// servito da express.static, bypassando il controllo di sessione qui sotto).
 app.get('/admin.html', (req: Request, res: Response) => {
   if (isValidSession(getSessionToken(req))) {
-    return res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
+    return res.sendFile(path.join(__dirname, '..', 'views', 'admin.html'));
   }
   res.status(401).type('html').send(LOGIN_PAGE_HTML);
 });
@@ -172,7 +189,8 @@ app.post('/api/login', (req: Request, res: Response) => {
 
   res.cookie(SESSION_COOKIE, createSession(), {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'strict',
+    secure: req.secure,
     maxAge: SESSION_TTL_MS,
   });
   res.json({ ok: true });
@@ -299,7 +317,7 @@ app.post('/api/content', requireAuth, (req: Request, res: Response) => {
     const item = createContentItem({ category, title, date, excerpt, featured: !!featured, image, body, slug });
     res.status(201).json(item);
   } catch (err) {
-    res.status(409).json({ message: (err as Error).message });
+    sendError(res, err);
   }
 });
 
@@ -310,7 +328,7 @@ app.get('/api/content/:category/:slug', (req: Request, res: Response) => {
     if (!item) return res.status(404).json({ message: 'Contenuto non trovato' });
     res.json(item);
   } catch (err) {
-    res.status(400).json({ message: (err as Error).message });
+    sendError(res, err);
   }
 });
 
@@ -336,7 +354,7 @@ app.put('/api/content/:category/:slug', requireAuth, (req: Request, res: Respons
     });
     res.json(item);
   } catch (err) {
-    res.status(409).json({ message: (err as Error).message });
+    sendError(res, err);
   }
 });
 
@@ -346,7 +364,7 @@ app.delete('/api/content/:category/:slug', requireAuth, (req: Request, res: Resp
     deleteContentItem(req.params.category, req.params.slug);
     res.status(204).end();
   } catch (err) {
-    res.status(404).json({ message: (err as Error).message });
+    sendError(res, err);
   }
 });
 
