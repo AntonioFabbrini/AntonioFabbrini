@@ -36,7 +36,7 @@
   }
   label{display:block;font-weight:700;font-size:0.85rem;margin:14px 0 4px;color:var(--ink-soft);}
   label:first-of-type{margin-top:0;}
-  input[type=text], textarea{
+  input[type=text], select, textarea{
     width:100%;padding:0.6em 0.7em;border:1px solid var(--line);border-radius:6px;
     background:#fff;color:var(--ink);font-family:inherit;font-size:0.95rem;
   }
@@ -79,6 +79,15 @@
   .category-group{margin-bottom:18px;}
   .category-group h3{font-size:0.8rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);margin:0 0 6px;}
   datalist{}
+
+  .list-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+  .list-head h2{margin:0;}
+  .category-filter{display:flex;flex-wrap:wrap;gap:6px;}
+  .filter-chip{
+    font-size:0.76rem;font-weight:700;padding:0.35em 0.9em;
+    border-radius:999px;border:1.5px solid var(--line);background:none;color:var(--ink-soft);
+  }
+  .filter-chip.active{background:var(--green);color:var(--paper-card);border-color:var(--green);}
 </style>
 </head>
 <body>
@@ -96,8 +105,7 @@
       <h2 id="formTitle">Nuovo contenuto</h2>
 
       <label for="category">Categoria</label>
-      <input type="text" id="category" list="categoryOptions" placeholder="es. ariel, olivia, bottega, tana" required>
-      <datalist id="categoryOptions"></datalist>
+      <select id="category" required></select>
 
       <label for="title">Titolo</label>
       <input type="text" id="title" required>
@@ -136,7 +144,10 @@
     </form>
 
     <div class="list">
-      <h2>Contenuti esistenti</h2>
+      <div class="list-head">
+        <h2>Contenuti esistenti</h2>
+        <div class="category-filter" id="categoryFilter"></div>
+      </div>
       <div id="list">Caricamento…</div>
     </div>
   </div>
@@ -149,7 +160,8 @@
   const cancelBtn = document.getElementById('cancelBtn');
   const formMsg = document.getElementById('formMsg');
   const listEl = document.getElementById('list');
-  const categoryOptions = document.getElementById('categoryOptions');
+  const categoryFilterEl = document.getElementById('categoryFilter');
+  let activeFilter = 'all';
 
   const fields = {
     category: document.getElementById('category'),
@@ -242,15 +254,66 @@
   async function loadCategories() {
     const res = await fetch(`${API}/categories`);
     const categories = await res.json();
-    categoryOptions.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}">`).join('');
+
+    const previousValue = fields.category.value;
+    fields.category.innerHTML =
+      '<option value="" disabled' + (previousValue ? '' : ' selected') + '>Scegli una categoria</option>' +
+      categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    if (previousValue) fields.category.value = previousValue;
+
+    renderCategoryFilter(categories);
+  }
+
+  function renderCategoryFilter(categories) {
+    // Se la categoria attiva è sparita (es. ultima voce eliminata e la
+    // cartella non esiste più), torna a "Tutte".
+    if (activeFilter !== 'all' && !categories.includes(activeFilter)) activeFilter = 'all';
+
+    const chips = ['all', ...categories];
+    categoryFilterEl.innerHTML = chips.map(cat => `
+      <button type="button" class="filter-chip ${cat === activeFilter ? 'active' : ''}" data-cat="${escapeHtml(cat)}">
+        ${cat === 'all' ? 'Tutte' : escapeHtml(cat)}
+      </button>
+    `).join('');
+
+    categoryFilterEl.querySelectorAll('.filter-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeFilter = btn.getAttribute('data-cat');
+        renderCategoryFilter(categories);
+        loadList();
+      });
+    });
+  }
+
+  function renderItem(item) {
+    return `
+      <div class="item">
+        ${item.image ? `<img class="item-thumb" src="${escapeHtml(item.image)}" alt="">` : ''}
+        <div class="item-title">${escapeHtml(item.title)}${item.featured ? ' ⭐' : ''}</div>
+        <div class="item-meta">${escapeHtml(item.date || '')}</div>
+        ${item.excerpt ? `<div class="item-excerpt">${escapeHtml(item.excerpt)}</div>` : ''}
+        <div class="item-actions">
+          <button type="button" class="btn-ghost" data-edit="${escapeHtml(item.category)}|${escapeHtml(item.slug)}">Modifica</button>
+          <button type="button" class="btn-danger" data-delete="${escapeHtml(item.category)}|${escapeHtml(item.slug)}">Elimina</button>
+        </div>
+      </div>
+    `;
   }
 
   async function loadList() {
-    const res = await fetch(`${API}/content`);
+    const url = activeFilter === 'all'
+      ? `${API}/content`
+      : `${API}/content?category=${encodeURIComponent(activeFilter)}`;
+    const res = await fetch(url);
     const items = await res.json();
 
     if (items.length === 0) {
       listEl.innerHTML = '<p class="item-excerpt">Nessun contenuto ancora.</p>';
+      return;
+    }
+
+    if (activeFilter !== 'all') {
+      listEl.innerHTML = items.map(renderItem).join('');
       return;
     }
 
@@ -262,18 +325,7 @@
     listEl.innerHTML = Object.keys(byCategory).sort().map(cat => `
       <div class="category-group">
         <h3>${escapeHtml(cat)}</h3>
-        ${byCategory[cat].map(item => `
-          <div class="item">
-            ${item.image ? `<img class="item-thumb" src="${escapeHtml(item.image)}" alt="">` : ''}
-            <div class="item-title">${escapeHtml(item.title)}${item.featured ? ' ⭐' : ''}</div>
-            <div class="item-meta">${escapeHtml(item.date || '')}</div>
-            ${item.excerpt ? `<div class="item-excerpt">${escapeHtml(item.excerpt)}</div>` : ''}
-            <div class="item-actions">
-              <button type="button" class="btn-ghost" data-edit="${escapeHtml(item.category)}|${escapeHtml(item.slug)}">Modifica</button>
-              <button type="button" class="btn-danger" data-delete="${escapeHtml(item.category)}|${escapeHtml(item.slug)}">Elimina</button>
-            </div>
-          </div>
-        `).join('')}
+        ${byCategory[cat].map(renderItem).join('')}
       </div>
     `).join('');
   }

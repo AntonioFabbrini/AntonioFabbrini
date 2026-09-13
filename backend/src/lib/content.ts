@@ -5,6 +5,15 @@ import { ContentItem } from '../types';
 const CONTENT_DIR = path.join(__dirname, '..', 'content');
 const SAFE_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+// Le uniche sezioni ammesse: creare una categoria nuova richiede di
+// aggiungerla qui (e alla pagina corrispondente nel frontend), non è
+// possibile farlo semplicemente scrivendone il nome in un form.
+export const ALLOWED_CATEGORIES = ['ariel', 'olivia', 'bottega', 'tana'] as const;
+
+export function isAllowedCategory(category: string): boolean {
+  return (ALLOWED_CATEGORIES as readonly string[]).includes(category);
+}
+
 export interface ContentInput {
   category: string;
   title: string;
@@ -62,10 +71,7 @@ function writeContentFile(filePath: string, input: ContentInput): void {
 }
 
 export function listCategories(): string[] {
-  if (!fs.existsSync(CONTENT_DIR)) return [];
-  return fs.readdirSync(CONTENT_DIR, { withFileTypes: true })
-    .filter(entry => entry.isDirectory())
-    .map(entry => entry.name);
+  return [...ALLOWED_CATEGORIES];
 }
 
 export function listContent(category?: string): ContentItem[] {
@@ -109,6 +115,7 @@ export function createContentItem(input: ContentInput): ContentItem {
   const category = slugify(input.category);
   const slug = slugify(input.slug || input.title);
   if (!category) throw new Error('La categoria è obbligatoria');
+  if (!isAllowedCategory(category)) throw new Error('Categoria non valida');
   if (!slug) throw new Error('Il titolo è obbligatorio');
 
   const filePath = path.join(CONTENT_DIR, category, `${slug}.md`);
@@ -134,6 +141,7 @@ export function updateContentItem(
   const newCategory = slugify(input.category);
   const newSlug = slugify(input.slug || input.title);
   if (!newCategory) throw new Error('La categoria è obbligatoria');
+  if (!isAllowedCategory(newCategory)) throw new Error('Categoria non valida');
   if (!newSlug) throw new Error('Il titolo è obbligatorio');
 
   const newPath = path.join(CONTENT_DIR, newCategory, `${newSlug}.md`);
